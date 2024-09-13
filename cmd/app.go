@@ -4,21 +4,23 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	"github.com/sirupsen/logrus"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-var EnvironmentVars map[string]string
+var Environment map[string]string
 var DbConn *gorm.DB
-var log *zap.Logger
+var Log *logrus.Logger
+var GinSv *gin.Engine
 
 func StartApp() {
 	initEnv()
 	initLog()
 	initDatabase()
+	initGin()
 }
 
 func initEnv() {
@@ -28,53 +30,82 @@ func initEnv() {
 		fmt.Println(err.Error())
 	}
 
-	EnvironmentVars = envVars
-	fmt.Printf("Environment variables loaded in %s profile.", strings.ToUpper(EnvironmentVars["CURRENT_ENV"]))
+	Environment = envVars
+	fmt.Printf("Environment variables loaded in %s profile. \n", strings.ToUpper(Environment["CURRENT_ENV"]))
 }
 
 func initLog() {
-	config := zap.NewDevelopmentConfig() // why DevelopmentConfig? because colors.
-	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-	config.DisableStacktrace = true
+	log := logrus.New()
 
-	lvl := zapcore.InfoLevel
-	switch EnvironmentVars["LOG_LEVEL"] {
-	case "DEBUG":
-		lvl = zapcore.DebugLevel
-	case "INFO":
-		lvl = zapcore.InfoLevel
-	case "WARN":
-		lvl = zapcore.WarnLevel
-	case "ERROR":
-		lvl = zapcore.ErrorLevel
-	case "DPANIC":
-		lvl = zapcore.DPanicLevel
-	case "PANIC":
-		lvl = zapcore.PanicLevel
-	case "FATAL":
-		lvl = zapcore.FatalLevel
-	}
+	lvl, _ := logrus.ParseLevel(Environment["LOG_LEVEL"])
+	log.SetLevel(lvl)
 
-	config.Level.SetLevel(lvl)
+	log.SetFormatter(&logrus.TextFormatter{DisableColors: true})
 
-	logger, _ := config.Build()
-	log = logger
+	Log.Info("Logger initialized")
+
+	Log = log
 }
 
 func initDatabase() {
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s",
-		EnvironmentVars["DB_HOST"],
-		EnvironmentVars["DB_PORT"],
-		EnvironmentVars["DB_USERNAME"],
-		EnvironmentVars["DB_PASSWORD"],
-		EnvironmentVars["DB_NAME"],
+		Environment["DB_HOST"],
+		Environment["DB_PORT"],
+		Environment["DB_USERNAME"],
+		Environment["DB_PASSWORD"],
+		Environment["DB_NAME"],
 	)
 
 	dbc, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 
 	if err != nil {
-		log.Error(err.Error())
+		Log.Error(err.Error())
 	}
 
 	DbConn = dbc
+}
+
+func initGin() {
+	ginMode := gin.DebugMode
+	switch Environment["CURRENT_ENV"] {
+	case "DEV":
+		ginMode = gin.ReleaseMode
+	case "TEST":
+		ginMode = gin.TestMode
+	case "PROD":
+		ginMode = gin.ReleaseMode
+	}
+
+	gin.SetMode(ginMode)
+
+	r := gin.New()
+
+	requestLogging := func(ctx *gin.Context) {
+		ctx.Next()
+
+		lgf := logrus.Fields{
+			"type":   "HTTP Request",
+			"uri":    ctx.Request.RequestURI,
+			"method": ctx.Request.Method,
+			"status": ctx.Writer.Status(),
+		}
+
+		Log.WithFields(lgf).Info()
+
+		ctx.Next()
+	}
+
+	if ginMode == gin.DebugMode || ginMode == gin.TestMode {
+		r.Use(requestLogging)
+	}
+
+	r.Use(gin.Recovery())
+
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, gin.H{"message": "pong"})
+	})
+
+	GinSv = r
+	r.Run(":" + Environment["SERVER_PORT"])
+
 }
