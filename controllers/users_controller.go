@@ -17,7 +17,7 @@ func NewUserController(e *gin.Engine, svc *services.UserService) {
 	ctl := UserController{svc}
 
 	public := e.Group("/users")
-	public.GET("/signup", ctl.signup)
+	public.POST("/signup", ctl.signup)
 }
 
 func (uc *UserController) signup(c *gin.Context) {
