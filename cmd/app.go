@@ -20,7 +20,7 @@ var GinSv *gin.Engine
 func StartApp() {
 	initEnv()
 	initLog()
-	// initDatabase()
+	initDatabase()
 	initGin()
 }
 
@@ -81,6 +81,8 @@ func initGin() {
 
 	r := gin.New()
 
+	GinSv = r
+
 	requestLogging := func(ctx *gin.Context) {
 		ctx.Next()
 
@@ -102,9 +104,7 @@ func initGin() {
 
 	r.Use(gin.Recovery())
 
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{"message": "pong"})
-	})
+	InitRoutes()
 
 	err := r.Run(":" + Environment["SERVER_PORT"])
 
@@ -112,8 +112,4 @@ func initGin() {
 		Log.Fatal("Gin Initialization error.")
 		os.Exit(1)
 	}
-
-	GinSv = r
-
-	Log.Info("Gin initialized")
 }

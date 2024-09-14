@@ -12,13 +12,11 @@ type UserController struct {
 	UserService *services.UserService
 }
 
-func NewUserController(e *gin.Engine, svc *services.UserService) *gin.Engine {
-	ct := &UserController{svc}
+func NewUserController(e *gin.Engine, svc *services.UserService) {
+	ctl := UserController{svc}
 
-	usersPublic := e.Group("/users")
-	usersPublic.POST("/signup", ct.signup)
-
-	return e
+	public := e.Group("/users")
+	public.GET("/signup", ctl.signup)
 }
 
 func (uc *UserController) signup(c *gin.Context) {
@@ -29,12 +27,12 @@ func (uc *UserController) signup(c *gin.Context) {
 		return
 	}
 
-	res, err := uc.UserService.CreateUser(req)
+	// res, err := uc.UserService.CreateUser(req)
 
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+	// if err != nil {
+	// 	c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 	return
+	// }
 
-	c.JSON(http.StatusCreated, gin.H{"data": res})
+	c.JSON(http.StatusCreated, gin.H{"data": req})
 }

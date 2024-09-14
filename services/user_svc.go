@@ -13,9 +13,7 @@ type UserService struct {
 }
 
 func NewUserService(ur *repositories.UserRepository) *UserService {
-	return &UserService{
-		UserRepo: ur,
-	}
+	return &UserService{ur}
 }
 
 func (us *UserService) CreateUser(req userdtos.CreateUserRequest) (*userdtos.CreateUserResponse, error) {
