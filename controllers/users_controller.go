@@ -3,6 +3,7 @@ package controllers
 import (
 	"go-api/dtos/userdtos"
 	"go-api/services"
+	"go-api/utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -20,19 +21,17 @@ func NewUserController(e *gin.Engine, svc *services.UserService) {
 }
 
 func (uc *UserController) signup(c *gin.Context) {
-	req := userdtos.CreateUserRequest{}
-	err := c.BindJSON(&req)
+	req, err := utils.BindJsonRequest(c, &userdtos.CreateUserRequest{})
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// res, err := uc.UserService.CreateUser(req)
+	res, err := uc.UserService.CreateUser(req.(userdtos.CreateUserRequest))
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
-	// if err != nil {
-	// 	c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	// 	return
-	// }
-
-	c.JSON(http.StatusCreated, gin.H{"data": req})
+	c.JSON(http.StatusCreated, gin.H{"data": res})
 }
