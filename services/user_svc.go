@@ -5,7 +5,6 @@ import (
 	"go-api/dtos/userdtos"
 	"go-api/repositories"
 
-	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -19,23 +18,16 @@ func NewUserService(ur *repositories.UserRepository) *UserService {
 	}
 }
 
-func (us *UserService) Signup(ctx *gin.Context) (*userdtos.CreateUserResponse, error) {
-	// Get request data.
-	requestBody := userdtos.CreateUserRequest{}
-	err := ctx.BindJSON(&requestBody)
-	if err != nil {
-		return nil, err
-	}
-
+func (us *UserService) CreateUser(req userdtos.CreateUserRequest) (*userdtos.CreateUserResponse, error) {
 	// Hash password from request
-	hashed, err := bcrypt.GenerateFromPassword([]byte(requestBody.Password), bcrypt.DefaultCost)
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
 
 	// Map requestBody to user model
 	user := domains.User{
-		Email:        requestBody.Email,
+		Email:        req.Email,
 		PasswordHash: string(hashed[:]),
 	}
 

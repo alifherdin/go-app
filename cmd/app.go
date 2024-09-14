@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -19,7 +20,7 @@ var GinSv *gin.Engine
 func StartApp() {
 	initEnv()
 	initLog()
-	initDatabase()
+	// initDatabase()
 	initGin()
 }
 
@@ -42,9 +43,9 @@ func initLog() {
 
 	log.SetFormatter(&logrus.TextFormatter{DisableColors: true})
 
-	Log.Info("Logger initialized")
-
 	Log = log
+
+	Log.Info("Logger initialized")
 }
 
 func initDatabase() {
@@ -69,7 +70,7 @@ func initGin() {
 	ginMode := gin.DebugMode
 	switch Environment["CURRENT_ENV"] {
 	case "DEV":
-		ginMode = gin.ReleaseMode
+		ginMode = gin.DebugMode
 	case "TEST":
 		ginMode = gin.TestMode
 	case "PROD":
@@ -105,7 +106,14 @@ func initGin() {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
 
-	GinSv = r
-	r.Run(":" + Environment["SERVER_PORT"])
+	err := r.Run(":" + Environment["SERVER_PORT"])
 
+	if err != nil {
+		Log.Fatal("Gin Initialization error.")
+		os.Exit(1)
+	}
+
+	GinSv = r
+
+	Log.Info("Gin initialized")
 }
